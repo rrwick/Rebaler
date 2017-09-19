@@ -1,0 +1,26 @@
+# Mac stuff
+.DS_Store
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution and packaging
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+setuptools*.zip
+
+# PyCharm
+.idea/
+
+gh-md-toc
