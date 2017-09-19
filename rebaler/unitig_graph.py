@@ -15,7 +15,6 @@ not, see <http://www.gnu.org/licenses/>.
 import itertools
 from collections import defaultdict
 from .misc import add_line_breaks_to_sequence, load_fasta
-from . import log
 from Bio import pairwise2
 
 
@@ -34,11 +33,10 @@ class UnitigGraph(object):
                 pos_name = name + '+'
                 self.add_link(pos_name, pos_name, 0, 0)
 
-    def save_to_gfa(self, filename, verbosity=1, newline=False, include_depth=True):
+    def save_to_gfa(self, filename, include_depth=True):
         """
         Saves whole graph to a GFA file.
         """
-        log.log(('\n' if newline else '') + 'Saving ' + filename, verbosity)
         with open(filename, 'w') as gfa:
             for segment in sorted(self.segments.values(), key=lambda x: x.full_name):
                 gfa.write(segment.gfa_segment_line(include_depth))
@@ -51,6 +49,18 @@ class UnitigGraph(object):
                                   key=lambda x: x.get_length()):
                 if segment.get_length() >= min_length:
                     fasta.write(segment.fasta_record())
+
+    def print_fasta_to_stdout(self, names):
+        for name in names:
+            segment = self.segments[name]
+            header = '>' + name + \
+                     ' length=' + str(segment.get_length()) + \
+                     ' depth=' + '%.2f' % segment.depth + 'x'
+            pos_name = name + '+'
+            if pos_name in self.links and self.links[pos_name] == [pos_name]:
+                header += ' circular=true'
+            print(header)
+            print(add_line_breaks_to_sequence(segment.forward_sequence, 70))
 
     def get_preceding_segments(self, seg_name):
         if seg_name not in self.reverse_links:
@@ -112,6 +122,9 @@ class UnitigGraph(object):
         preceding_seg_name = preceding_segments[0]
         following_seg_name = following_segments[0]
         return preceding_seg_name == pos_seg_name and following_seg_name == pos_seg_name
+
+    def get_total_segment_length(self):
+        return sum(s.get_length() for s in self.segments.values())
 
     def replace_with_polished_sequences(self, polished_fasta):
         """

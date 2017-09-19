@@ -22,7 +22,7 @@ import itertools
 import collections
 
 from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, float_to_str,\
-    print_table, red, reverse_complement
+    print_table, red
 from .alignment import Alignment
 from . import log
 from .unitig_graph import UnitigGraph
@@ -33,7 +33,7 @@ __version__ = "0.1.0"
 
 def main():
     args = get_arguments()
-    log.logger = log.Log(None, 1)
+    log.logger = log.Log()
 
     log.log_section_header('Loading reference')
     log.log_explanation('This reference sequence will be used as a template for the Rebaler '
@@ -50,23 +50,23 @@ def main():
                         'the corresponding read sequence. This creates an unpolished assembly '
                         'made directly from read fragments, similar to what would be produced by '
                         'miniasm.')
-    print('Loading reads...                             ', flush=True, end='')
+    log.log('Loading reads...                             ', end='')
     reads, _ = load_fasta_or_fastq(args.reads)
-    print(int_to_str(len(reads)) + ' reads', flush=True)
+    log.log(int_to_str(len(reads)) + ' reads')
 
-    print('Aligning reads to reference with minimap2... ', flush=True, end='')
+    log.log('Aligning reads to reference with minimap2... ', end='')
     alignments = get_initial_alignments(args)
-    print(int_to_str(len(alignments)) + ' initial alignments', flush=True)
+    log.log(int_to_str(len(alignments)) + ' initial alignments')
 
-    print('Culling alignments to a non-redundant set... ', flush=True, end='')
+    log.log('Culling alignments to a non-redundant set... ', end='')
     alignments, depths = cull_alignments(alignments, reference)
-    print(int_to_str(len(alignments)) + ' alignments remain', flush=True)
+    log.log(int_to_str(len(alignments)) + ' alignments remain')
 
-    print('Constructing unpolished sequences...         ', flush=True, end='')
+    log.log('Constructing unpolished sequences...         ', end='')
     store_read_seqs_in_alignments(alignments, reads)
     partitions = partition_reference(reference, alignments)
     unpolished_sequences = get_unpolished_sequences(partitions, ref_seqs)
-    print('done', flush=True)
+    log.log('done')
 
     log.log_section_header('Polishing assembly')
     log.log_explanation('Rebaler now runs Racon to polish the miniasm assembly. It does '
@@ -74,8 +74,9 @@ def main():
                         'are rotated between rounds such that all parts (including the ends) are '
                         'polished well. Assembly quality is measured by the sum of all read '
                         'alignment scores.')
-    polish_assembly_with_racon(ref_names, unpolished_sequences, circularity, args.reads,
-                               args.threads)
+    unitig_graph = polish_assembly_with_racon(ref_names, unpolished_sequences, circularity,
+                                              args.reads, args.threads)
+    unitig_graph.print_fasta_to_stdout(ref_names)
 
 
 def get_arguments():
@@ -93,6 +94,8 @@ def get_arguments():
                         help='FASTA file of reference assembly')
     parser.add_argument('reads', type=str,
                         help='FASTA/FASTQ file of long reads')
+    parser.add_argument('--keep', action='store_true',
+                        help='Do not delete temporary directory of intermediate files')
 
     if len(sys.argv) == 1:
         parser.print_help(file=sys.stderr)
@@ -273,18 +276,23 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
     times_quality_failed_to_beat_best = 0
 
     counter = itertools.count(start=1)
-    current_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_unpolished_unitigs.fasta')
+    round_num = '%02d' % next(counter)
+    current_fasta = os.path.join(polish_dir, round_num + '_unpolished_assembly.fasta')
+    current_gfa = os.path.join(polish_dir, round_num + '_unpolished_assembly.gfa')
     unitig_graph.save_to_fasta(current_fasta)
-    current_sequences = unpolished_sequences
+    unitig_graph.save_to_gfa(current_gfa)
 
     racon_loop_count = 10
     for polish_round_count in range(racon_loop_count):
-        mappings_filename = os.path.join(polish_dir, ('%03d' % next(counter)) + '_alignments.paf')
-        racon_log = os.path.join(polish_dir, ('%03d' % next(counter)) + '_racon.log')
-        polished_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_polished.fasta')
-        fixed_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_fixed.fasta')
-        rotated_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_rotated.fasta')
-        rotated_gfa = os.path.join(polish_dir, ('%03d' % next(counter)) + '_rotated.gfa')
+
+        # Prepare filenames
+        round_num = '%02d' % next(counter)
+        mappings_filename = os.path.join(polish_dir, round_num + '_1_alignments.paf')
+        racon_log = os.path.join(polish_dir, round_num + '_2_racon.log')
+        polished_fasta = os.path.join(polish_dir, round_num + '_3_polished.fasta')
+        fixed_fasta = os.path.join(polish_dir, round_num + '_4_fixed.fasta')
+        rotated_fasta = os.path.join(polish_dir, round_num + '_5_rotated.fasta')
+        rotated_gfa = os.path.join(polish_dir, round_num + '_5_rotated.gfa')
 
         mapping_quality, unitig_depths = \
             make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads, threads)
@@ -293,7 +301,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
                 unitig_seg.depth = unitig_depths[unitig_name]
 
         racon_table_row = ['begin' if polish_round_count == 0 else str(polish_round_count),
-                           int_to_str(get_total_sequence_length(current_sequences)),
+                           int_to_str(unitig_graph.get_total_segment_length()),
                            float_to_str(mapping_quality, 2)]
         print_table([racon_table_row], fixed_col_widths=col_widths, left_align_header=False,
                     alignments='LRR', indent=0, header_format='normal', bottom_align_header=False)
@@ -302,7 +310,8 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         if mapping_quality > best_mapping_quality:
             best_mapping_quality = mapping_quality
             best_fasta = current_fasta
-            best_unitig_sequences = {name: seq for name, seq in current_sequences.items()}
+            best_unitig_sequences = {name: seg.forward_sequence
+                                     for name, seg in unitig_graph.segments.items()}
             times_quality_failed_to_beat_best = 0
         else:
             times_quality_failed_to_beat_best += 1
@@ -349,6 +358,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         unitig_graph.normalise_read_depths()
     else:
         log.log(red('Polishing failed'))
+    return unitig_graph
 
 
 def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads, threads):
@@ -368,7 +378,3 @@ def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads,
                 mappings.write('\n')
                 unitig_depths[a.ref_name] += a.fraction_ref_aligned()
     return mapping_quality, unitig_depths
-
-
-def get_total_sequence_length(sequences):
-    return sum(len(x) for x in sequences.values())

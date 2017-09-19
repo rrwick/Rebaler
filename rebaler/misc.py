@@ -19,6 +19,8 @@ import shutil
 import argparse
 import re
 import textwrap
+from . import log
+
 
 
 class MyHelpFormatter(argparse.HelpFormatter):
@@ -233,7 +235,6 @@ BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 RED = '\033[31m'
 GREEN = '\033[32m'
-MAGENTA = '\033[35m'
 YELLOW = '\033[93m'
 DIM = '\033[2m'
 
@@ -273,7 +274,7 @@ def print_table(table, alignments='', max_col_width=30, col_separation=3, indent
     if row_extra_text is None:
         row_extra_text = {}
     if leading_newline:
-        print('')
+        log.log('')
 
     # Ensure the alignments string is the same length as the column count
     alignments += 'L' * (column_count - len(alignments))
@@ -332,7 +333,7 @@ def print_table(table, alignments='', max_col_width=30, col_separation=3, indent
             if return_str:
                 full_table_str += indenter + row_str + '\n'
             else:
-                print(indenter + row_str)
+                log.log(indenter + row_str)
     if return_str:
         return full_table_str
 

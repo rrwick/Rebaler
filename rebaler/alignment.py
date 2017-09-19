@@ -23,7 +23,6 @@ class Alignment(object):
         line_parts = paf_line.strip().split('\t')
 
         self.read_name = line_parts[0]
-        self.read_length = int(line_parts[1])
         self.read_start = int(line_parts[2])
         self.read_end = int(line_parts[3])
         self.read_strand = line_parts[4]

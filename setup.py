@@ -11,8 +11,7 @@ from setuptools import setup
 
 # Make sure this is being run with Python 3.4 or later.
 if sys.version_info.major != 3 or sys.version_info.minor < 4:
-    print('Error: you must execute setup.py using Python 3.4 or later')
-    sys.exit(1)
+    sys.exit('Error: you must execute setup.py using Python 3.4 or later')
 
 version = re.search('^__version__\s*=\s*"(.*)"', open('rebaler/rebaler.py').read(), re.M).group(1)
 short_descr = re.search("ArgumentParser\(description='(.*)'", open('rebaler/rebaler.py').read(), re.M).group(1)
