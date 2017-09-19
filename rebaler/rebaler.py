@@ -302,7 +302,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
 
         racon_table_row = ['begin' if polish_round_count == 0 else str(polish_round_count),
                            int_to_str(unitig_graph.get_total_segment_length()),
-                           float_to_str(mapping_quality, 2)]
+                           int_to_str(mapping_quality)]
         print_table([racon_table_row], fixed_col_widths=col_widths, left_align_header=False,
                     alignments='LRR', indent=0, header_format='normal', bottom_align_header=False)
 
@@ -362,7 +362,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
 
 
 def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads, threads):
-    mapping_quality = 0.0
+    mapping_quality = 0
     unitig_depths = collections.defaultdict(float)
 
     with open(mappings_filename, 'wt') as mappings:
@@ -373,7 +373,7 @@ def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads,
             paf_line = process.stdout.readline().rstrip().decode()
             if paf_line:
                 a = Alignment(paf_line)
-                mapping_quality += a.percent_identity
+                mapping_quality += a.alignment_score
                 mappings.write(paf_line.split('cg:Z:')[0].rstrip())
                 mappings.write('\n')
                 unitig_depths[a.ref_name] += a.fraction_ref_aligned()
