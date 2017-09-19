@@ -369,52 +369,12 @@ def green(text):
     return GREEN + text + END_FORMATTING
 
 
-def bold_green(text):
-    return GREEN + BOLD + text + END_FORMATTING
-
-
 def red(text):
     return RED + text + END_FORMATTING
 
 
-def magenta(text):
-    return MAGENTA + text + END_FORMATTING
-
-
-def bold_red(text):
-    return RED + BOLD + text + END_FORMATTING
-
-
-def bold(text):
-    return BOLD + text + END_FORMATTING
-
-
-def bold_underline(text):
-    return BOLD + UNDERLINE + text + END_FORMATTING
-
-
-def underline(text):
-    return UNDERLINE + text + END_FORMATTING
-
-
-def dim(text):
-    return DIM + text + END_FORMATTING
-
-
-def dim_underline(text):
-    return DIM + UNDERLINE + text + END_FORMATTING
-
-
-def bold_yellow(text):
-    return YELLOW + BOLD + text + END_FORMATTING
-
-
 def bold_yellow_underline(text):
     return YELLOW + BOLD + UNDERLINE + text + END_FORMATTING
-
-
-def bold_red_underline(text):
-    return RED + BOLD + UNDERLINE + text + END_FORMATTING
 
 
 def len_without_format(text):

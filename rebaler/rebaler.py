@@ -19,6 +19,7 @@ import os
 import sys
 import subprocess
 import itertools
+import collections
 
 from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, float_to_str,\
     print_table, red, reverse_complement
@@ -283,9 +284,14 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         polished_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_polished.fasta')
         fixed_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_fixed.fasta')
         rotated_fasta = os.path.join(polish_dir, ('%03d' % next(counter)) + '_rotated.fasta')
+        rotated_gfa = os.path.join(polish_dir, ('%03d' % next(counter)) + '_rotated.gfa')
 
-        mapping_quality = make_racon_polish_alignments(current_fasta, mappings_filename,
-                                                       polish_reads, threads)
+        mapping_quality, unitig_depths = \
+            make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads, threads)
+        for unitig_name, unitig_seg in unitig_graph.segments.items():
+            if unitig_name in unitig_depths:
+                unitig_seg.depth = unitig_depths[unitig_name]
+
         racon_table_row = ['begin' if polish_round_count == 0 else str(polish_round_count),
                            int_to_str(get_total_sequence_length(current_sequences)),
                            float_to_str(mapping_quality, 2)]
@@ -309,7 +315,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         command = ['racon', '--verbose', '9', '-t', str(threads), '--bq', '-1',
                    polish_reads, mappings_filename, current_fasta, polished_fasta]
         return_code = 1
-        for t in range(100):  # Only try a fixed number of times, to prevent an infinite loop.
+        for _ in range(100):  # Only try a fixed number of times, to prevent an infinite loop.
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = process.communicate()
             with open(racon_log, 'wb') as log_file:
@@ -331,6 +337,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         unitig_graph.save_to_fasta(fixed_fasta)
         unitig_graph.rotate_circular_sequences()
         unitig_graph.save_to_fasta(rotated_fasta)
+        unitig_graph.save_to_gfa(rotated_gfa)
         current_fasta = rotated_fasta
 
     log.log('')
@@ -339,7 +346,6 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
         for unitig_name, unitig_seq in best_unitig_sequences.items():
             segment = unitig_graph.segments[unitig_name]
             segment.forward_sequence = unitig_seq
-            segment.reverse_sequence = reverse_complement(unitig_seq)
         unitig_graph.normalise_read_depths()
     else:
         log.log(red('Polishing failed'))
@@ -347,6 +353,8 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
 
 def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads, threads):
     mapping_quality = 0.0
+    unitig_depths = collections.defaultdict(float)
+
     with open(mappings_filename, 'wt') as mappings:
         command = ['minimap2', '-c', '-x', 'map-ont', '-t', str(threads),
                    current_fasta, polish_reads]
@@ -358,9 +366,9 @@ def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads,
                 mapping_quality += a.percent_identity
                 mappings.write(paf_line.split('cg:Z:')[0].rstrip())
                 mappings.write('\n')
-    return mapping_quality
+                unitig_depths[a.ref_name] += a.fraction_ref_aligned()
+    return mapping_quality, unitig_depths
 
 
 def get_total_sequence_length(sequences):
     return sum(len(x) for x in sequences.values())
-

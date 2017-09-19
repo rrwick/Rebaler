@@ -61,6 +61,7 @@ class Log(object):
 # This is the one and only instance of the Log class.
 logger = Log()
 
+
 def log(text, verbosity=1, stderr=False, end='\n', print_to_screen=True, write_to_log_file=True):
     text_no_formatting = remove_formatting(text)
 
@@ -100,26 +101,6 @@ def log_section_header(message, verbosity=1, single_newline=False):
     log('-' * (len(message) + 3 + len(time)), verbosity, print_to_screen=False)
 
 
-def log_progress_line(completed, total, base_pairs=None, end_newline=False):
-    """
-    Logs a progress line using a carriage return to overwrite the previous progress line. Only the
-    final progress line will be written to the log file.
-    """
-    progress_str = int_to_str(completed) + ' / ' + int_to_str(total)
-    if total > 0:
-        percent = 100.0 * completed / total
-    else:
-        percent = 0.0
-    progress_str += ' (' + '%.1f' % percent + '%)'
-    if base_pairs is not None:
-        progress_str += ' - ' + int_to_str(base_pairs) + ' bp'
-
-    end_char = '\n' if end_newline else ''
-    log('\r' + progress_str, end=end_char, write_to_log_file=False)
-    if end_newline:
-        log(progress_str, print_to_screen=False)
-
-
 def log_explanation(text, verbosity=1, print_to_screen=True, write_to_log_file=True,
                     extra_empty_lines_after=1, indent_size=4):
     """
@@ -141,30 +122,6 @@ def log_explanation(text, verbosity=1, print_to_screen=True, write_to_log_file=T
     for _ in range(extra_empty_lines_after):
         log('', verbosity=verbosity, print_to_screen=print_to_screen,
             write_to_log_file=write_to_log_file)
-
-
-def log_number_list(numbers, verbosity=1, print_to_screen=True, write_to_log_file=True,
-                    indent_size=4):
-    """
-    Some lists of numbers are long, so this function makes them wrap nicely when displayed on
-    stdout.
-    """
-    text = ' ' * indent_size + ', '.join(str(x) for x in numbers)
-    if print_to_screen:
-        terminal_width = shutil.get_terminal_size().columns
-        for line in textwrap.wrap(text, width=terminal_width - 1):
-            log(line, verbosity=verbosity, print_to_screen=True, write_to_log_file=False)
-    if write_to_log_file:
-        log(text, verbosity=verbosity, print_to_screen=False, write_to_log_file=True)
-
-
-def int_to_str(num, max_num=0):
-    if num is None:
-        num_str = 'n/a'
-    else:
-        num_str = '{:,}'.format(num)
-    max_str = '{:,}'.format(int(max_num))
-    return num_str.rjust(len(max_str))
 
 
 def get_timestamp():

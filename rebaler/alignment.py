@@ -57,9 +57,6 @@ class Alignment(object):
             if (letter == 'I' or letter == 'D') and num > self.max_indel:
                 self.max_indel = num
 
-        self.read_end_gap = self.read_length - self.read_end
-        self.ref_end_gap = self.ref_length - self.ref_end
-
         # Quality offers a way to compare two alignments against each other.
         # length quality:   https://www.desmos.com/calculator/nman8btt8k
         # identity quality: https://www.desmos.com/calculator/5bcvlafzo7
@@ -67,11 +64,12 @@ class Alignment(object):
         min_identity = 70.0
         half_length_score = 5000.0
         half_indel_score = 25.0
-        ref_length = abs(self.ref_end - self.ref_start)
+        aligned_length = abs(self.ref_end - self.ref_start)
         if self.percent_identity <= min_identity:
             self.quality = 0.0
         else:
-            length_quality = 100.0 * (1.0 + (-half_length_score / (ref_length + half_length_score)))
+            length_quality = 100.0 * \
+                             (1.0 + (-half_length_score / (aligned_length + half_length_score)))
             identity_quality = (self.percent_identity - min_identity) / (100.0 - min_identity)
             indel_quality = half_indel_score / (self.max_indel + half_indel_score)
             self.quality = length_quality * identity_quality * indel_quality
@@ -152,3 +150,9 @@ class Alignment(object):
             if letter == 'M' or letter == 'I' or letter == 'D':
                 expanded_cigar.append(letter * num)
         return ''.join(expanded_cigar)
+
+    def fraction_ref_aligned(self):
+        try:
+            return (self.ref_end - self.ref_start) / self.ref_length
+        except ZeroDivisionError:
+            return 0.0
