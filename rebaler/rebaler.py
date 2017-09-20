@@ -20,9 +20,10 @@ import sys
 import subprocess
 import itertools
 import collections
+import shutil
 
 from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, float_to_str,\
-    print_table, red
+    print_table, red, colour, get_right_arrow
 from .alignment import Alignment
 from . import log
 from .unitig_graph import UnitigGraph
@@ -53,6 +54,7 @@ def main():
     log.log('Loading reads...                             ', end='')
     reads, _ = load_fasta_or_fastq(args.reads)
     log.log(int_to_str(len(reads)) + ' reads')
+    nicknames = get_read_nickname_dict([x[0] for x in reads])
 
     log.log('Aligning reads to reference with minimap2... ', end='')
     alignments = get_initial_alignments(args)
@@ -62,11 +64,11 @@ def main():
     alignments, depths = cull_alignments(alignments, reference)
     log.log(int_to_str(len(alignments)) + ' alignments remain')
 
-    log.log('Constructing unpolished sequences...         ', end='')
+    log.log('\nConstructing unpolished assembly:')
     store_read_seqs_in_alignments(alignments, reads)
     partitions = partition_reference(reference, alignments)
+    print_partitions(ref_names, partitions, nicknames, ref_seqs)
     unpolished_sequences = get_unpolished_sequences(partitions, ref_seqs)
-    log.log('done')
 
     log.log_section_header('Polishing assembly')
     log.log_explanation('Rebaler now runs Racon to polish the miniasm assembly. It does '
@@ -74,9 +76,15 @@ def main():
                         'are rotated between rounds such that all parts (including the ends) are '
                         'polished well. Assembly quality is measured by the sum of all read '
                         'alignment scores.')
+    polish_dir = 'temp_rebaler_' + str(os.getpid())
     unitig_graph = polish_assembly_with_racon(ref_names, unpolished_sequences, circularity,
-                                              args.reads, args.threads)
+                                              args.reads, args.threads, polish_dir)
     unitig_graph.print_fasta_to_stdout(ref_names)
+
+    if not args.keep:
+        log.log('\nDeleting temp directory ' + polish_dir)
+        shutil.rmtree(polish_dir, ignore_errors=True)
+    log.log('')
 
 
 def get_arguments():
@@ -89,13 +97,14 @@ def get_arguments():
                                                  'of bacterial genomes',
                                      formatter_class=MyHelpFormatter)
     parser.add_argument('-t', '--threads', type=int, default=default_threads,
-                        help='Number of threads to use for alignment')
+                        help='Number of threads to use for alignment and polishing')
+    parser.add_argument('--keep', action='store_true',
+                        help='Do not delete temp directory of intermediate files (default: '
+                             'delete temp directory)')
     parser.add_argument('reference', type=str,
                         help='FASTA file of reference assembly')
     parser.add_argument('reads', type=str,
                         help='FASTA/FASTQ file of long reads')
-    parser.add_argument('--keep', action='store_true',
-                        help='Do not delete temporary directory of intermediate files')
 
     if len(sys.argv) == 1:
         parser.print_help(file=sys.stderr)
@@ -228,6 +237,40 @@ def partition_reference(reference, alignments):
     return partitions
 
 
+def print_partitions(names, partitions, nicknames, ref_seqs):
+    arrow = ' ' + get_right_arrow() + ' '
+    for name in names:
+        contig_partitions = partitions[name]
+        output_parts = []
+        log.log('\n' + name + ':')
+        for start, end, alignment in contig_partitions:
+
+            if alignment is None:
+                read_name = 'reference(+)'
+                read_start, read_end = start, end
+            else:
+                read_name = nicknames[alignment.read_name] + '(' + alignment.read_strand + ')'
+                _, read_start, read_end = alignment.get_read_seq_by_ref_coords(start, end,
+                                                                               ref_seqs[name])
+            # Merge this output part in with the previous, if applicable.
+            if len(output_parts) > 0:
+                prev_read_name, prev_start, prev_end = output_parts[-1]
+            else:
+                prev_read_name, prev_start, prev_end = '', 0, 0
+            if read_name == prev_read_name and read_start == prev_end:
+                output_parts.pop()
+                output_parts.append((read_name, prev_start, read_end))
+            else:
+                output_parts.append((read_name, read_start, read_end))
+
+        output_parts_str = []
+        for read_name, read_start, read_end in output_parts:
+            range_str = ':' + str(read_start) + '-' + str(read_end)
+            str_colour = 'red' if read_name == 'reference(+)' else 'green'
+            output_parts_str.append(colour(read_name + range_str, str_colour))
+        log.log(arrow.join(output_parts_str))
+
+
 def get_unpolished_sequences(partitions, ref_seqs):
     """
     This function goes through the partitions and returns
@@ -235,14 +278,8 @@ def get_unpolished_sequences(partitions, ref_seqs):
     unpolished_sequences = {}
     for name, ref_partitions in partitions.items():
         seq_parts = []
-        # print(name)  # TEMP
         ref_seq = ref_seqs[name]
         for start, end, alignment in ref_partitions:
-            # print('  ', str(start) + '-' + str(end))  # TEMP
-            # print(alignment)  # TEMP
-            # print(alignment.cigar)  # TEMP
-            # print(ref_seqs[name][start:end])  # TEMP
-            # print(alignment.get_read_seq_by_ref_coords(start, end, ref_seq))  # TEMP
 
             # If there is no alignment, then the reference sequence is used for this part.
             if alignment is None:
@@ -250,16 +287,15 @@ def get_unpolished_sequences(partitions, ref_seqs):
 
             # If there is an alignment, then the sequence is taken from the read.
             else:
-                seq_parts.append(alignment.get_read_seq_by_ref_coords(start, end, ref_seq))
-        # print('\n')  # TEMP
+                seq_parts.append(alignment.get_read_seq_by_ref_coords(start, end, ref_seq)[0])
 
         seq = ''.join(seq_parts)
         unpolished_sequences[name] = seq
     return unpolished_sequences
 
 
-def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_reads, threads):
-    polish_dir = 'temp_polish_' + str(os.getpid())
+def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_reads, threads,
+                               polish_dir):
     if not os.path.isdir(polish_dir):
         os.makedirs(polish_dir)
 
@@ -378,3 +414,48 @@ def make_racon_polish_alignments(current_fasta, mappings_filename, polish_reads,
                 mappings.write('\n')
                 unitig_depths[a.ref_name] += a.fraction_ref_aligned()
     return mapping_quality, unitig_depths
+
+
+def get_read_nickname_dict(read_names):
+    """
+    Read names can be quite long, so for the sake of output brevity, this function tries to come
+    up with some shorter nicknames for the reads.
+    """
+    nickname_dict = {}
+
+    # Handle Albacore reads: if splitting on the first dash results in mostly unique values.
+    before_dash = [n.split('-')[0] for n in read_names]
+    if all(len(n) == 8 for n in before_dash):
+        counter = collections.defaultdict(int)
+        for n in before_dash:
+            counter[n] += 1
+        for n in read_names:
+            nickname = n.split('-')[0]
+            if counter[nickname] == 1:
+                nickname_dict[n] = nickname
+            else:
+                nickname_dict[n] = n
+        return nickname_dict
+
+    # Find any common prefix.
+    prefix = len(os.path.commonprefix(read_names))
+
+    # Handle fast5 filename reads: if _ch and _read are in each read name.
+    if all(('_ch' in n and '_read' in n) for n in read_names):
+        counter = collections.defaultdict(int)
+        for n in read_names:
+            nickname = 'ch' + n.split('_ch')[-1].split('_strand')[0]
+            counter[nickname] += 1
+        for n in read_names:
+            nickname = 'ch' + n.split('_ch')[-1].split('_strand')[0]
+            if counter[nickname] == 1:
+                nickname_dict[n] = nickname
+            else:
+                nickname_dict[n] = n[prefix:]
+        return nickname_dict
+
+    # If the above failed, just trim off any common prefix.
+    if prefix > 0:
+        return {n: n[prefix:] for n in read_names}
+    else:
+        return {n: n for n in read_names}

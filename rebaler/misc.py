@@ -387,3 +387,15 @@ def len_without_format(text):
 
 def remove_formatting(text):
     return re.sub('\033.*?m', '', text)
+
+
+def get_right_arrow():
+    """
+    This function returns either a Unicode right arrow or '->', depending on the system encoding.
+    """
+    try:
+        '\u2192'.encode(sys.stdout.encoding)
+    except (AttributeError, UnicodeEncodeError):
+        return '->'
+    else:
+        return '\u2192'

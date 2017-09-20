@@ -97,10 +97,7 @@ class Alignment(object):
         read_seq_start, read_seq_end = None, None
         read_pos, ref_pos = 0, self.ref_start
 
-        # gapped_ref = []  # TEMP
-        # gapped_read = []  # TEMP
-
-        match_count = 0  # TEMP
+        match_count = 0
         for i in self.get_expanded_cigar():
             if ref_pos == ref_start:
                 read_seq_start = read_pos
@@ -108,37 +105,28 @@ class Alignment(object):
                 read_seq_end = read_pos
 
             if i == 'M':
-                # gapped_ref.append(ref_seq[ref_pos])  # TEMP
-                # gapped_read.append(self.read_seq[read_pos])  # TEMP
-                if ref_seq[ref_pos] == self.read_seq[read_pos]:  # TEMP
-                    match_count += 1  # TEMP
+                if ref_seq[ref_pos] == self.read_seq[read_pos]:
+                    match_count += 1
                 read_pos += 1
                 ref_pos += 1
             elif i == 'I':
-                # gapped_ref.append('-')  # TEMP
-                # gapped_read.append(self.read_seq[read_pos])  # TEMP
                 read_pos += 1
             elif i == 'D':
-                # gapped_ref.append(ref_seq[ref_pos])  # TEMP
-                # gapped_read.append('-')  # TEMP
                 ref_pos += 1
-
-        # print(''.join(gapped_read))  # TEMP
-        # print(''.join(gapped_ref))  # TEMP
 
         if ref_pos == ref_start:
             read_seq_start = read_pos
         if ref_pos == ref_end:
             read_seq_end = read_pos
 
-        assert match_count == self.matching_bases  # TEMP
+        assert match_count == self.matching_bases
         assert read_pos + self.read_start == self.read_end
         assert ref_pos == self.ref_end
         assert read_seq_start is not None
         assert read_seq_end is not None
         seq = self.read_seq[read_seq_start:read_seq_end]
         assert len(seq) == read_seq_end - read_seq_start
-        return seq
+        return seq, read_seq_start, read_seq_end
 
     def get_expanded_cigar(self):
         expanded_cigar = []
