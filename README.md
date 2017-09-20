@@ -8,9 +8,9 @@ I made Rebaler for bacterial genomes (specifically for the task of [testing base
 
 ## Requirements
 
-Rebaler runs on [Python](https://www.python.org/) 3.4+ and uses [Biopython](http://biopython.org/).
+Rebaler runs on [Python 3.4+](https://www.python.org/) and uses [Biopython](http://biopython.org/).
 
-It also assumes that `minimap2` and `racon` executables are available in your `PATH`. If you can open a termanal and run those commands, you're good to go.
+It also assumes that `minimap2` and `racon` executables are available in your `PATH`. If you can open a terminal and run those commands, you're good to go.
 
 
 
@@ -29,26 +29,26 @@ rebaler -h
 
 * If the `python3 setup.py install` command complains about permissions, you may need to run it with `sudo`.
 * Install just for your user: `python3 setup.py install --user`
+    * If you get a strange 'can't combine user with prefix' error, read [this](http://stackoverflow.com/questions/4495120).
 * Install to a specific location: `python3 setup.py install --prefix=$HOME/.local`
 * Install with pip (local copy): `pip3 install path/to/Rebaler`
 * Install with pip (from GitHub): `pip3 install git+https://github.com/rrwick/Rebaler.git`
 
 
-### Build and run without installation
+### Run without installation
 
-The program can then be executed by directly from the repository directory using the `rebaler-runner.py` script:
+Rebaler can be run directly from its repository by using the `rebaler-runner.py` script:
 
 ```bash
 git clone https://github.com/rrwick/Rebaler.git
-cd Rebaler
-./rebaler-runner.py -h
+Rebaler/rebaler-runner.py -h
 ```
 
 
 
 ## Usage
 
-Rebaler is simple to use, just give it reads and a reference and it will output its assembly to stdout when done:
+Rebaler is simple to use – give it a reference and reads, and it will output its assembly to stdout when done:
 ```
 rebaler reference.fasta reads.fastq.gz > assembly.fasta
 ```
@@ -81,8 +81,8 @@ optional arguments:
 1) Load in the reference contigs.
 2) Use minimap2 to align long reads to the reference.
 3) Remove lower quality alignments (judged by length, identity and size of indels) until the reference is just covered. Any given position in the reference should now have a coverage of 1 or 2 (or 0 if the reads failed to cover a spot).
-4) Replace the reference sequence by read sequences to produce an unpolished assembly, similar to what [miniasm](https://github.com/lh3/miniasm) would make.
-5) Finally, conduct multiple rounds of Racon polishing with all reads to produce the best possible consensus sequence.
+4) Replace the reference sequence with corresponding read fragments to produce an unpolished assembly (like what [miniasm](https://github.com/lh3/miniasm) would make). If parts of the reference had no read coverage, the original reference sequence will be left in place.
+5) Conduct multiple rounds of Racon polishing with all reads to produce the best possible consensus sequence. Circular sequences will be 'rotated' between polishing rounds to ensure that all parts are polished well.
 
 
 
