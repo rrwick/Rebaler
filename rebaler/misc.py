@@ -366,10 +366,6 @@ def colour(text, text_colour):
     return coloured_text
 
 
-def green(text):
-    return GREEN + text + END_FORMATTING
-
-
 def red(text):
     return RED + text + END_FORMATTING
 
