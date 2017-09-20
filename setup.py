@@ -28,4 +28,5 @@ setup(name='Rebaler',
       version=version,
       license='GPL',
       packages=['rebaler'],
+      install_requires=['biopython'],
       entry_points={'console_scripts': ['rebaler = rebaler.rebaler:main']})
