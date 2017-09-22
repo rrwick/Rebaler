@@ -60,7 +60,7 @@ class UnitigGraph(object):
             if pos_name in self.links and self.links[pos_name] == [pos_name]:
                 header += ' circular=true'
             print(header)
-            print(add_line_breaks_to_sequence(segment.forward_sequence, 70))
+            print(add_line_breaks_to_sequence(segment.forward_sequence, 70), end='')
 
     def get_preceding_segments(self, seg_name):
         if seg_name not in self.reverse_links:
