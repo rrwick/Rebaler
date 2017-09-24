@@ -22,7 +22,7 @@ import itertools
 import collections
 import shutil
 
-from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, float_to_str,\
+from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, \
     print_table, red, colour, get_right_arrow
 from .alignment import Alignment
 from . import log
@@ -62,6 +62,8 @@ def main():
 
     log.log('Culling alignments to a non-redundant set... ', end='')
     alignments, depths = cull_alignments(alignments, reference)
+    for depth_list in depths.values():
+        assert all(0 <= x <= 2 for x in depth_list)
     log.log(int_to_str(len(alignments)) + ' alignments remain')
 
     log.log('\nConstructing unpolished assembly:')
@@ -147,7 +149,7 @@ def cull_alignments(alignments, reference):
     alignments = sorted(alignments, reverse=True, key=lambda x: x.quality)
     alignment_count = len(alignments)
 
-    for i in range(alignment_count-1, 0, -1):
+    for i in range(alignment_count-1, -1, -1):
         a = alignments[i]
         name = a.ref_name
         can_delete = all(x > 1 for x in depths[name][a.ref_start:a.ref_end])
