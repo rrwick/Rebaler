@@ -22,7 +22,6 @@ import textwrap
 from . import log
 
 
-
 class MyHelpFormatter(argparse.HelpFormatter):
     """
     This is a custom formatter class for argparse. It allows for some custom formatting,
@@ -244,26 +243,6 @@ def print_table(table, alignments='', max_col_width=30, col_separation=3, indent
                 subsequent_indent='', return_str=False, header_format='bold_underline',
                 hide_header=False, fixed_col_widths=None, left_align_header=True,
                 bottom_align_header=True):
-    """
-    Args:
-        table: a list of lists of strings (one row is one list, all rows should be the same length)
-        alignments: a string of L and R, indicating the alignment for each row
-        max_col_width: values longer than this will be wrapped
-        col_separation: the number of spaces between columns
-        indent: the number of spaces between the table and the left side of the terminal
-        row_colour: a dictionary of row indices and their colour names
-        sub_colour: a dictionary of values to colour names for which the text colour will be set
-        row_extra_text: a dictionary of row indices and extra text to display after the row
-        leading_newline: if True, the function will print a blank line above the table
-        subsequent_indent: this string will be added to the start of wrapped text lines
-        return_str: if True, this function will return a string of the table instead of printing it
-        header_format: the formatting (colour, underline, etc) of the header line
-        hide_header: if True, the header is not printed
-        fixed_col_widths: a list to specify exact column widths (automatic if not used)
-        left_align_header: if False, the header will follow the column alignments
-        bottom_align_header: if False, the header will align to the top, like other rows
-        verbosity: the table will only be logged if the logger verbosity is >= this value
-    """
     column_count = len(table[0])
     table = [x[:column_count] for x in table]
     table = [x + [''] * (column_count - len(x)) for x in table]
