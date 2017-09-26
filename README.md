@@ -86,6 +86,15 @@ optional arguments:
 
 
 
+## Circular contigs
+
+If the reference is made of circular contigs (as is the norm for bacterial genomes), Rebaler can take this into account during Racon polishing. Specifically, it will 'rotate' the contigs (change the starting position) between polishing rounds to ensure that all parts of the genome are well polished, including the ends.
+
+To indicate that a reference contig is circular, it should have `circular=true` in its fasta header<br>
+For example: `>chromosome length=5138942 circular=true`
+
+
+
 ## License
 
 [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html)
