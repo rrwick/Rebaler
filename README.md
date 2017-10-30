@@ -82,7 +82,7 @@ optional arguments:
 2) Use minimap2 to align long reads to the reference.
 3) Remove lower quality alignments (judged by length, identity and size of indels) until the reference is just covered. Any given position in the reference should now have a coverage of 1 or 2 (or 0 if the reads failed to cover a spot).
 4) Replace the reference sequence with corresponding read fragments to produce an unpolished assembly (like what [miniasm](https://github.com/lh3/miniasm) would make). If parts of the reference had no read coverage, the original reference sequence will be left in place.
-5) Conduct multiple rounds of Racon polishing with all reads to produce the best possible consensus sequence. Circular sequences will be 'rotated' between polishing rounds to ensure that all parts are polished well.
+5) Conduct multiple rounds of Racon polishing with all reads to produce the best possible consensus sequence.
 
 
 
