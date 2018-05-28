@@ -4,6 +4,17 @@ Rebaler is a program for conducting reference-based assemblies using long reads.
 
 I made Rebaler for bacterial genomes (specifically for the task of [testing basecallers](https://github.com/rrwick/Basecalling-comparison)). It should in principle work for non-bacterial genomes as well, but I haven't tested it.
 
+* __Reasons to use Rebaler__:
+    * You want to reassemble/polish an assembly with long reads, using a reference assembly to guide the large-scale structure.
+    * You don't want the reference assembly's basecalls to influence the basecalls in your new assembly.
+* __Reasons to _not_ use Rebaler__:
+   * You expect there to be structural differences between your reference genome and your sequenced reads. Rebaler is built on the assumption that the genome structure is the same, only bases differ.
+   * You want to polish an assembly using the same long reads you used to make the assembly. Rebaler might work for this, but simply using Racon on its own is probably better ([read more here](https://github.com/rrwick/Rebaler/issues/3)).
+
+If you have have raw, signal-level data available (`bax.h5` files for PacBio, `fast5` files for Nanopore), then it's a good idea to run a signal-level polisher ([Arrow](https://github.com/PacificBiosciences/GenomicConsensus) or [Nanopolish](https://github.com/jts/nanopolish)) after Rebaler.
+
+
+
 
 
 ## Requirements
@@ -11,6 +22,8 @@ I made Rebaler for bacterial genomes (specifically for the task of [testing base
 Rebaler runs on [Python 3.4+](https://www.python.org/) and uses [Biopython](http://biopython.org/).
 
 It also assumes that `minimap2` and `racon` executables are available in your `PATH`. If you can open a terminal and run those commands, you're good to go.
+
+Note that as of v0.1.1, Rebaler requires [Racon](https://github.com/isovic/racon) v1.0 or later. Check this with `racon --version`. If that command gives you an error, your version of Racon is too old and you need a new one.
 
 
 

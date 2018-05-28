@@ -133,7 +133,7 @@ class UnitigGraph(object):
         polished_seqs = load_fasta(polished_fasta)
         for seg_name, segment in self.segments.items():
             try:
-                polished_seq = [x[1] for x in polished_seqs if 'Consensus_' + seg_name == x[0]][0]
+                polished_seq = [x[1] for x in polished_seqs if seg_name == x[0]][0]
 
                 # Racon sometimes drops the start or end of sequences, so we do some semi-global
                 # alignments to see if bases have been lost. If so, we put them back!

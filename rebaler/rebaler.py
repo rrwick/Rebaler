@@ -29,7 +29,7 @@ from . import log
 from .unitig_graph import UnitigGraph
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def main():
@@ -359,15 +359,15 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
             break
 
         # Run Racon. It crashes sometimes, so repeat until its return code is 0.
-        command = ['racon', '--verbose', '9', '-t', str(threads), '--bq', '-1',
-                   polish_reads, mappings_filename, current_fasta, polished_fasta]
+        command = ['racon', '-t', str(threads), polish_reads, mappings_filename, current_fasta]
         return_code = 1
         for _ in range(100):  # Only try a fixed number of times, to prevent an infinite loop.
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = process.communicate()
             with open(racon_log, 'wb') as log_file:
-                log_file.write(out)
                 log_file.write(err)
+            with open(polished_fasta, 'wb') as racon_out:
+                racon_out.write(out)
             return_code = process.returncode
             if return_code == 0 and os.path.isfile(polished_fasta):
                 break
