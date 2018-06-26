@@ -15,6 +15,7 @@ not, see <http://www.gnu.org/licenses/>.
 import sys
 import os
 import gzip
+import random
 import shutil
 import argparse
 import re
@@ -374,3 +375,21 @@ def get_right_arrow():
         return '->'
     else:
         return '\u2192'
+
+
+RANDOM_SEQ_DICT = {0: 'A', 1: 'C', 2: 'G', 3: 'T'}
+
+
+def get_random_base():
+    """
+    Returns a random base with 25% probability of each.
+    """
+    return RANDOM_SEQ_DICT[random.randint(0, 3)]
+
+
+def get_random_sequence(length):
+    """
+    Returns a random sequence of the given length.
+    """
+    return ''.join([get_random_base() for _ in range(length)])
+

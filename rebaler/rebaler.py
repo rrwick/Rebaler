@@ -23,7 +23,7 @@ import collections
 import shutil
 
 from .misc import MyHelpFormatter, load_fasta, load_fasta_or_fastq, int_to_str, \
-    print_table, red, colour, get_right_arrow
+    print_table, red, colour, get_right_arrow, get_random_sequence
 from .alignment import Alignment
 from . import log
 from .unitig_graph import UnitigGraph
@@ -59,6 +59,8 @@ def main():
     log.log('Aligning reads to reference with minimap2... ', end='')
     alignments = get_initial_alignments(args)
     log.log(int_to_str(len(alignments)) + ' initial alignments')
+    ref_depth = sum(a.fraction_ref_aligned() for a in alignments)
+    log.log('                                             {:.2f}x depth'.format(ref_depth))
 
     log.log('Culling alignments to a non-redundant set... ', end='')
     alignments, depths = cull_alignments(alignments, reference)
@@ -70,7 +72,7 @@ def main():
     store_read_seqs_in_alignments(alignments, reads)
     partitions = partition_reference(reference, alignments)
     print_partitions(ref_names, partitions, nicknames, ref_seqs)
-    unpolished_sequences = get_unpolished_sequences(partitions, ref_seqs)
+    unpolished_sequences = get_unpolished_sequences(partitions, ref_seqs, args.random)
 
     log.log_section_header('Polishing assembly')
     log.log_explanation('Rebaler now runs Racon to polish the miniasm assembly. It does '
@@ -103,6 +105,9 @@ def get_arguments():
     parser.add_argument('--keep', action='store_true',
                         help='Do not delete temp directory of intermediate files (default: '
                              'delete temp directory)')
+    parser.add_argument('--random', action='store_true',
+                        help='If a part of the reference is missing, replace it with random sequence'
+                             'sequence (default: leave it as the reference sequence)')
     parser.add_argument('reference', type=str,
                         help='FASTA file of reference assembly')
     parser.add_argument('reads', type=str,
@@ -273,7 +278,7 @@ def print_partitions(names, partitions, nicknames, ref_seqs):
         log.log(arrow.join(output_parts_str))
 
 
-def get_unpolished_sequences(partitions, ref_seqs):
+def get_unpolished_sequences(partitions, ref_seqs, use_random):
     """
     This function goes through the partitions and returns
     """
@@ -285,7 +290,10 @@ def get_unpolished_sequences(partitions, ref_seqs):
 
             # If there is no alignment, then the reference sequence is used for this part.
             if alignment is None:
-                seq_parts.append(ref_seq[start:end])
+                if use_random:
+                    seq_parts.append(get_random_sequence(end-start))
+                else:
+                    seq_parts.append(ref_seq[start:end])
 
             # If there is an alignment, then the sequence is taken from the read.
             else:
@@ -320,7 +328,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
     unitig_graph.save_to_fasta(current_fasta)
     unitig_graph.save_to_gfa(current_gfa)
 
-    racon_loop_count = 10
+    racon_loop_count = 4
     for polish_round_count in range(racon_loop_count):
 
         # Prepare filenames
