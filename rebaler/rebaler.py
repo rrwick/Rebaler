@@ -106,7 +106,7 @@ def get_arguments():
                         help='Do not delete temp directory of intermediate files (default: '
                              'delete temp directory)')
     parser.add_argument('--random', action='store_true',
-                        help='If a part of the reference is missing, replace it with random sequence'
+                        help='If a part of the reference is missing, replace it with random '
                              'sequence (default: leave it as the reference sequence)')
     parser.add_argument('reference', type=str,
                         help='FASTA file of reference assembly')
