@@ -99,19 +99,29 @@ def get_arguments():
 
     parser = argparse.ArgumentParser(description='Rebaler: reference-based long read assemblies '
                                                  'of bacterial genomes',
-                                     formatter_class=MyHelpFormatter)
-    parser.add_argument('-t', '--threads', type=int, default=default_threads,
-                        help='Number of threads to use for alignment and polishing')
-    parser.add_argument('--keep', action='store_true',
-                        help='Do not delete temp directory of intermediate files (default: '
-                             'delete temp directory)')
-    parser.add_argument('--random', action='store_true',
-                        help='If a part of the reference is missing, replace it with random '
-                             'sequence (default: leave it as the reference sequence)')
-    parser.add_argument('reference', type=str,
-                        help='FASTA file of reference assembly')
-    parser.add_argument('reads', type=str,
-                        help='FASTA/FASTQ file of long reads')
+                                     formatter_class=MyHelpFormatter, add_help=False)
+
+    positional_args = parser.add_argument_group('Positional arguments')
+    positional_args.add_argument('reference', type=str,
+                                 help='FASTA file of reference assembly')
+    positional_args.add_argument('reads', type=str,
+                                 help='FASTA/FASTQ file of long reads')
+
+    optional_args = parser.add_argument_group('Optional arguments')
+    optional_args.add_argument('-t', '--threads', type=int, default=default_threads,
+                               help='Number of threads to use for alignment and polishing')
+    optional_args.add_argument('--keep', action='store_true',
+                               help='Do not delete temp directory of intermediate files (default: '
+                                    'delete temp directory)')
+    optional_args.add_argument('--random', action='store_true',
+                               help='If a part of the reference is missing, replace it with random '
+                                    'sequence (default: leave it as the reference sequence)')
+
+    help_args = parser.add_argument_group('Help')
+    help_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                           help='Show this help message and exit')
+    help_args.add_argument('--version', action='version', version='Rebaler v' + __version__,
+                           help="Show program's version number and exit")
 
     if len(sys.argv) == 1:
         parser.print_help(file=sys.stderr)
