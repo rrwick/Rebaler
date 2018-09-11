@@ -367,7 +367,7 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
             break
 
         # Run Racon. It crashes sometimes, so repeat until its return code is 0.
-        command = ['racon', '-t', str(threads), polish_reads, mappings_filename, current_fasta]
+        command = ['racon', '-t', str(threads), '-q', '0', polish_reads, mappings_filename, current_fasta]
         return_code = 1
         for _ in range(100):  # Only try a fixed number of times, to prevent an infinite loop.
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
