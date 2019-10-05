@@ -449,8 +449,10 @@ def polish_assembly_with_racon(names, unpolished_sequences, circularity, polish_
                 os.remove(racon_log)
 
         # If even after all those tries Racon still didn't succeed, then we give up!
-        if return_code != 0 or not os.path.isfile(polished_fasta):
-            break
+        if return_code == -4:
+            sys.exit("Racon is not compatible on this machine. It has been terminated due to the error Illegal Instruction.\n You should recompile Racon from the source at https://github.com/isovic/racon/releases")
+        elif return_code != 0 or not os.path.isfile(polished_fasta):
+            sys.exit("Racon could not polish your data!")
 
         unitig_graph.replace_with_polished_sequences(polished_fasta)
         unitig_graph.save_to_fasta(fixed_fasta)
