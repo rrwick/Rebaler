@@ -176,6 +176,7 @@ def final_shred_and_polish(ref_names, circularity, polish_dir, threads):
         shred_assembly(a, polish_reads)
 
     unpolished_sequences = dict((x[0], x[1]) for x in load_fasta(last_assembly))
+    ref_names = [r for r in ref_names if r in unpolished_sequences]
     final_assembly = polish_assembly_with_racon(ref_names, unpolished_sequences, circularity,
                                                 polish_reads, threads, polish_dir, 2)
     return final_assembly
